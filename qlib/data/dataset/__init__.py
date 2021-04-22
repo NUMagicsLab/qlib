@@ -9,6 +9,7 @@ import numpy as np
 import bisect
 from ...utils import lazy_sort_index
 from .utils import get_level_index
+import dolphindb as ddb
 
 
 class Dataset(Serializable):
@@ -62,6 +63,20 @@ class Dataset(Serializable):
             return the object
         """
         pass
+
+class DolphinDataSource(Dataset):
+
+    def __init__(self):
+        self.setup_data()
+
+    def setup_data(self, *args, **kwargs):
+        s = ddb.session()
+        host = kwargs['host']
+        port = kwargs['port']
+        username = kwargs['username']
+        password = kwargs['password']
+        s.connect(host, port)
+        s.login(username, password)
 
 
 class DatasetH(Dataset):
