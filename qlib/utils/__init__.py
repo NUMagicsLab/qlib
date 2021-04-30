@@ -216,7 +216,7 @@ def init_instance_by_config(
 ) -> object:
     """
     get initialized instance with config
-
+    
     Parameters
     ----------
     config : Union[str, dict, object]

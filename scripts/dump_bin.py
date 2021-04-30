@@ -115,6 +115,9 @@ class DumpDataBase:
     def _get_date(
         self, file_or_df: [Path, pd.DataFrame], *, is_begin_end: bool = False, as_set: bool = False
     ) -> Iterable[pd.Timestamp]:
+        '''
+        get date information from csv
+        '''
         if not isinstance(file_or_df, pd.DataFrame):
             df = self._get_source_data(file_or_df)
         else:
@@ -124,24 +127,33 @@ class DumpDataBase:
         else:
             _calendars = df[self.date_field_name]
 
+        # return both begin date, end date, and all unique dates
         if is_begin_end and as_set:
             return (_calendars.min(), _calendars.max()), set(_calendars)
+        # return only begin and end dates 
         elif is_begin_end:
             return _calendars.min(), _calendars.max()
+        # return only unique dates
         elif as_set:
             return set(_calendars)
+        # return all dates 
         else:
             return _calendars.tolist()
 
     def _get_source_data(self, file_path: Path) -> pd.DataFrame:
+        '''
+        load dataframe from file
+        '''
         df = pd.read_csv(str(file_path.resolve()), low_memory=False)
         df[self.date_field_name] = df[self.date_field_name].astype(str).astype(np.datetime64)
         # df.drop_duplicates([self.date_field_name], inplace=True)
         return df
-
+    
+    # the filename is _qlib_CODE, it returns CODE
     def get_symbol_from_file(self, file_path: Path) -> str:
         return fname_to_code(file_path.name[: -len(self.file_suffix)].strip().lower())
-
+    
+    # get the field names to dump
     def get_dump_fields(self, df_columns: Iterable[str]) -> Iterable[str]:
         return (
             self._include_fields
@@ -151,8 +163,12 @@ class DumpDataBase:
             else df_columns
         )
 
+
     @staticmethod
     def _read_calendars(calendar_path: Path) -> List[pd.Timestamp]:
+        '''
+        load a list of timestamps into a dataframe
+        '''
         return sorted(
             map(
                 pd.Timestamp,
@@ -160,7 +176,11 @@ class DumpDataBase:
             )
         )
 
+
     def _read_instruments(self, instrument_path: Path) -> pd.DataFrame:
+        '''
+        load a list of instrument names and their start, end dates into dataframe
+        '''
         df = pd.read_csv(
             instrument_path,
             sep=self.INSTRUMENTS_SEP,
@@ -174,12 +194,18 @@ class DumpDataBase:
         return df
 
     def save_calendars(self, calendars_data: list):
+        '''
+        save calendars in a file named after freq as a numpy array
+        '''
         self._calendars_dir.mkdir(parents=True, exist_ok=True)
         calendars_path = str(self._calendars_dir.joinpath(f"{self.freq}.txt").expanduser().resolve())
         result_calendars_list = list(map(lambda x: self._format_datetime(x), calendars_data))
         np.savetxt(calendars_path, result_calendars_list, fmt="%s", encoding="utf-8")
 
     def save_instruments(self, instruments_data: Union[list, pd.DataFrame]):
+        '''
+        save instrument names, start and end dates in a file as a numpy array
+        '''
         self._instruments_dir.mkdir(parents=True, exist_ok=True)
         instruments_path = str(self._instruments_dir.joinpath(self.INSTRUMENTS_FILE_NAME).resolve())
         if isinstance(instruments_data, pd.DataFrame):
@@ -193,6 +219,9 @@ class DumpDataBase:
             np.savetxt(instruments_path, instruments_data, fmt="%s", encoding="utf-8")
 
     def data_merge_calendar(self, df: pd.DataFrame, calendars_list: List[pd.Timestamp]) -> pd.DataFrame:
+        '''
+        align df's index to the calendars' index and return the aligned df
+        '''
         # calendars
         calendars_df = pd.DataFrame(data=calendars_list, columns=[self.date_field_name])
         calendars_df[self.date_field_name] = calendars_df[self.date_field_name].astype(np.datetime64)
@@ -228,6 +257,8 @@ class DumpDataBase:
                     np.array(_df[field]).astype("<f").tofile(fp)
             else:
                 # append; self._mode == self.ALL_MODE or not bin_path.exists()
+                # concatenate the date_index (a number, indicating the position of the ealiest date of this df in the whole calendar list) and the feature column
+                # then write to file as binary
                 np.hstack([date_index, _df[field]]).astype("<f").tofile(str(bin_path.resolve()))
 
     def _dump_bin(self, file_or_data: [Path, pd.DataFrame], calendar_list: List[pd.Timestamp]):
@@ -259,6 +290,9 @@ class DumpDataBase:
 
 class DumpDataAll(DumpDataBase):
     def _get_all_date(self):
+        '''
+        record all symbols and their corresponding date ranges
+        '''
         logger.info("start get all date......")
         all_datetime = set()
         date_range_list = []
@@ -267,7 +301,8 @@ class DumpDataAll(DumpDataBase):
             with ProcessPoolExecutor(max_workers=self.works) as executor:
                 for file_path, ((_begin_time, _end_time), _set_calendars) in zip(
                     self.csv_files, executor.map(_fun, self.csv_files)
-                ):
+                ):  
+                    # set union of dates information from all csv files
                     all_datetime = all_datetime | _set_calendars
                     if isinstance(_begin_time, pd.Timestamp) and isinstance(_end_time, pd.Timestamp):
                         _begin_time = self._format_datetime(_begin_time)
@@ -275,18 +310,25 @@ class DumpDataAll(DumpDataBase):
                         symbol = self.get_symbol_from_file(file_path)
                         _inst_fields = [symbol.upper(), _begin_time, _end_time]
                         date_range_list.append(f"{self.INSTRUMENTS_SEP.join(_inst_fields)}")
-                    p_bar.update()
+                    p_bar.update() 
+        # record all symbols and their corresponding date ranges
         self._kwargs["all_datetime_set"] = all_datetime
         self._kwargs["date_range_list"] = date_range_list
         logger.info("end of get all date.\n")
 
     def _dump_calendars(self):
+        '''
+        save all loaded dates as a calendar (nuympy array) in a file 
+        '''
         logger.info("start dump calendars......")
         self._calendars_list = sorted(map(pd.Timestamp, self._kwargs["all_datetime_set"]))
         self.save_calendars(self._calendars_list)
         logger.info("end of calendars dump.\n")
 
     def _dump_instruments(self):
+        '''
+        save all loaded instruments and their date ranges as a calendar (nuympy array) in a file 
+        '''
         logger.info("start dump instruments......")
         self.save_instruments(self._kwargs["date_range_list"])
         logger.info("end of instruments dump.\n")

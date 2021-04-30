@@ -38,3 +38,6 @@ tags
 *.swp
 
 ./pretrain
+
+.idea
+

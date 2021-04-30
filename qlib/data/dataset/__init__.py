@@ -66,17 +66,46 @@ class Dataset(Serializable):
 
 class DolphinDataSource(Dataset):
 
-    def __init__(self):
+    def __init__(self, db_kwargs: dict = None, segment_kwargs: dict = None, handler_kwargs: dict = None):
+        if db_kwargs:
+            if not isinstance(db_kwargs, dict):
+                raise TypeError(f"param db_kwargs must be type dict, not {type(db_kwargs)}")
+            self.db_kwargs = db_kwargs.copy()
+            self.host = self.db_kwargs["host"]
+            self.port = self.db_kwargs["port"]
+            self.username = self.db_kwargs["username"]
+            self.password = self.db_kwargs["password"]
+        if segment_kwargs:
+            if not isinstance(segment_kwargs, dict):
+                if not isinstance(segment_kwargs, dict):
+                    raise TypeError(f"param segment_kwargs must be type dict, not {type(segment_kwargs)}")
+            self.segment_kwargs = segment_kwargs.copy()
+            self.train_range = self.segment_kwargs["train"]
+            self.validation_range = self.segment_kwargs["validation"]
+            self.test_range = self.segment_kwargs["test"]
         self.setup_data()
 
-    def setup_data(self, *args, **kwargs):
-        s = ddb.session()
-        host = kwargs['host']
-        port = kwargs['port']
-        username = kwargs['username']
-        password = kwargs['password']
-        s.connect(host, port)
-        s.login(username, password)
+    def setup_data(self):
+        self.s = ddb.session()
+        self.s.connect(self.host, self.port)
+        self.s.login(self.username, self.password)
+
+        self.table_name = "A_ZBWT_Table"
+        all_trades_table = self.s.loadTable(tableName=A_ZBWT_TABLE, dbPath="dfs://A_ZBWT_DFS")
+        all_trades_table = all_trades_table.toDF()
+
+    def prepare(self, segment: str = "train") -> object:
+        if segment == "train":
+            raise NotImplementedError("")
+            # self.s.run("select count(*) from f{self.table_name} where date <=%s , code=\"%s\" limit 1" % (
+            #     dt.strftime("%Y.%m.%d"), code))
+        elif segment == "validation":
+            raise NotImplementedError
+        elif segment == "test":
+            raise NotImplementedError
+        else:
+            raise TypeError("segments other than train, validation and test are not supported")
+
 
 
 class DatasetH(Dataset):
