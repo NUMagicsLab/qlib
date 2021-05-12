@@ -89,20 +89,36 @@ class DolphinDataSource(Dataset):
         self.s = ddb.session()
         self.s.connect(self.host, self.port)
         self.s.login(self.username, self.password)
-
-        self.table_name = "A_ZBWT_Table"
-        all_trades_table = self.s.loadTable(tableName=A_ZBWT_TABLE, dbPath="dfs://A_ZBWT_DFS")
-        all_trades_table = all_trades_table.toDF()
+        self.market_table = self.s.loadTable(tableName="A_Market_Table", dbPath="dfs://A_Market_DFS")
 
     def prepare(self, segment: str = "train") -> object:
         if segment == "train":
-            raise NotImplementedError("")
-            # self.s.run("select count(*) from f{self.table_name} where date <=%s , code=\"%s\" limit 1" % (
-            #     dt.strftime("%Y.%m.%d"), code))
+            query = '''
+            select code, date, open, high, low, price 
+            from {} 
+            where code in ["SZ000732", "SZ002632", "002923", "300009"], date >= {}, date <= {}
+            '''.format(self.market_table.tableName(), self.train_range[0], self.train_range[1])
+            train = self.s.run(query)
+            train = train.groupby(["code", "date"]).tail(1).reset_index(drop=True)
+            return train
         elif segment == "validation":
-            raise NotImplementedError
+            query = '''
+            select code, date, open, high, low, price 
+            from {} 
+            where code in ["SZ000732", "SZ002632", "002923", "300009"], date >= {}, date <= {}
+            '''.format(self.market_table.tableName(), self.validation_range[0], self.validation_range[1])
+            validation = self.s.run(query)
+            validation = validation.groupby(["code", "date"]).tail(1).reset_index(drop=True)
+            return validation
         elif segment == "test":
-            raise NotImplementedError
+            query = '''
+            select code, date, open, high, low, price 
+            from {} 
+            where code in ["SZ000732", "SZ002632", "002923", "300009"], date >= {}, date <= {}
+            '''.format(self.market_table.tableName(), self.test_range[0], self.test_range[1])
+            test = self.s.run(query)
+            test = test.groupby(["code", "date"]).tail(1).reset_index(drop=True)
+            return test
         else:
             raise TypeError("segments other than train, validation and test are not supported")
 
