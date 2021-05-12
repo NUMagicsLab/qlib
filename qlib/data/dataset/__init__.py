@@ -66,7 +66,9 @@ class Dataset(Serializable):
 
 class DolphinDataSource(Dataset):
 
-    def __init__(self, db_kwargs: dict = None, segment_kwargs: dict = None, handler_kwargs: dict = None):
+    def __init__(self, dbconfig: dict = None, segments: dict = None, handler_kwargs: dict = None):
+        db_kwargs = dbconfig
+        segment_kwargs = segments
         if db_kwargs:
             if not isinstance(db_kwargs, dict):
                 raise TypeError(f"param db_kwargs must be type dict, not {type(db_kwargs)}")
@@ -89,14 +91,18 @@ class DolphinDataSource(Dataset):
         self.s = ddb.session()
         self.s.connect(self.host, self.port)
         self.s.login(self.username, self.password)
-        self.market_table = self.s.loadTable(tableName="A_Market_Table", dbPath="dfs://A_Market_DFS")
+        query = '''
+        mtable = loadTable("dfs://A_Market_DFS", "A_Market_Table")
+        '''
+        self.s.run(query)
+        self.market_table = self.s.loadTable(tableName="mtable")
 
     def prepare(self, segment: str = "train") -> object:
         if segment == "train":
             query = '''
             select code, date, open, high, low, price 
             from {} 
-            where code in ["SZ000732", "SZ002632", "002923", "300009"], date >= {}, date <= {}
+            where code in ["SZ000732", "SZ002632", "SZ002923", "SZ300009"], date >= {}, date <= {}
             '''.format(self.market_table.tableName(), self.train_range[0], self.train_range[1])
             train = self.s.run(query)
             train = train.groupby(["code", "date"]).tail(1).reset_index(drop=True)

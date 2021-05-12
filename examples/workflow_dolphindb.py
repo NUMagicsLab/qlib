@@ -21,12 +21,8 @@ from qlib.tests.data import GetData
 
 if __name__ == "__main__":
 
-    # use default data
-    provider_uri = "~/.qlib/qlib_data/cn_data"  # target_dir
-    if not exists_qlib_data(provider_uri):
-        print(f"Qlib data is not found in {provider_uri}")
-        GetData().qlib_data(target_dir=provider_uri, region=REG_CN)
 
+    provider_uri = "~/.qlib/qlib_data/cn_data"
     qlib.init(provider_uri=provider_uri, region=REG_CN)
 
     market = "csi300"
@@ -64,14 +60,14 @@ if __name__ == "__main__":
             "module_path": "qlib.data.dataset",
             "kwargs": {
                 "dbconfig": {
-                    "port": 8848,
-                    "host": "localshot",
+                    "port": 8961,
+                    "host": "localhost",
                     "username": "admin",
                     "password": "123456"
                 },
                 "segments": {
-                    "train": ("2008.01-01", "2014.12.31"),
-                    "valid": ("2015.01.01", "2016.12.31"),
+                    "train": ("2008.01.01", "2014.12.31"),
+                    "validation": ("2015.01.01", "2016.12.31"),
                     "test": ("2017.01.01", "2020.08.01"),
                 },
             },
