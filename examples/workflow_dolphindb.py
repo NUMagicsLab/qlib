@@ -41,8 +41,8 @@ if __name__ == "__main__":
 
     task = {
         "model": {
-            "class": "LGBModel",
-            "module_path": "qlib.contrib.model.gbdt",
+            "class": "LGBModelDolphin",
+            "module_path": "qlib.contrib.model.gbdtdp",
             "kwargs": {
                 "loss": "mse",
                 "colsample_bytree": 0.8879,

@@ -9,7 +9,11 @@ import numpy as np
 import bisect
 from ...utils import lazy_sort_index
 from .utils import get_level_index
-import dolphindb as ddb
+try:
+    import dolphindb as ddb
+    import numpy as np
+except:
+    print("error: no dolphindb library installed")
 
 
 class Dataset(Serializable):
@@ -105,7 +109,15 @@ class DolphinDataSource(Dataset):
             where code in ["SZ000732", "SZ002632", "SZ002923", "SZ300009"], date >= {}, date <= {}
             '''.format(self.market_table.tableName(), self.train_range[0], self.train_range[1])
             train = self.s.run(query)
+            ran_floats = [round(np.random.uniform(-1, 1), 2) for _ in range(len(train))]
+            train["LABEL0"] = ran_floats
             train = train.groupby(["code", "date"]).tail(1).reset_index(drop=True)
+            train = train.rename(columns={"code": "instrument", "date": "datetime"})
+            train = train[["datetime", "instrument", "open", "high", "low", "price", "LABEL0"]]
+            train = train.set_index(["datetime", "instrument"])
+            tuples = zip(["feature", "feature", "feature", "feature", "label"], ["open", "high", "low", "price", "LABEL0"])
+            index = pd.MultiIndex.from_tuples(tuples)
+            train.columns = index
             return train
         elif segment == "validation":
             query = '''
@@ -114,7 +126,16 @@ class DolphinDataSource(Dataset):
             where code in ["SZ000732", "SZ002632", "002923", "300009"], date >= {}, date <= {}
             '''.format(self.market_table.tableName(), self.validation_range[0], self.validation_range[1])
             validation = self.s.run(query)
+
+            ran_floats = [round(np.random.uniform(-1, 1), 2) for _ in range(len(validation))]
+            validation["LABEL0"] = ran_floats
             validation = validation.groupby(["code", "date"]).tail(1).reset_index(drop=True)
+            validation = validation.rename(columns={"code": "instrument", "date": "datetime"})
+            validation = validation[["datetime", "instrument", "open", "high", "low", "price", "LABEL0"]]
+            validation = validation.set_index(["datetime", "instrument"])
+            tuples = zip(["feature", "feature", "feature", "feature", "label"], ["open", "high", "low", "price", "LABEL0"])
+            index = pd.MultiIndex.from_tuples(tuples)
+            validation.columns = index
             return validation
         elif segment == "test":
             query = '''
@@ -123,7 +144,15 @@ class DolphinDataSource(Dataset):
             where code in ["SZ000732", "SZ002632", "002923", "300009"], date >= {}, date <= {}
             '''.format(self.market_table.tableName(), self.test_range[0], self.test_range[1])
             test = self.s.run(query)
+            ran_floats = [round(np.random.uniform(-1, 1), 2) for _ in range(len(test))]
+            test["LABEL0"] = ran_floats
             test = test.groupby(["code", "date"]).tail(1).reset_index(drop=True)
+            test = test.rename(columns={"code": "instrument", "date": "datetime"})
+            test = test[["datetime", "instrument", "open", "high", "low", "price", "LABEL0"]]
+            test = test.set_index(["datetime", "instrument"])
+            tuples = zip(["feature", "feature", "feature", "feature", "label"], ["open", "high", "low", "price", "LABEL0"])
+            index = pd.MultiIndex.from_tuples(tuples)
+            test.columns = index
             return test
         else:
             raise TypeError("segments other than train, validation and test are not supported")

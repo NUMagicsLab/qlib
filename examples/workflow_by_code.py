@@ -18,6 +18,8 @@ from qlib.utils import exists_qlib_data, init_instance_by_config, flatten_dict
 from qlib.workflow import R
 from qlib.workflow.record_temp import SignalRecord, PortAnaRecord
 from qlib.tests.data import GetData
+import pickle
+from qlib.data.dataset.handler import DataHandlerLP
 
 if __name__ == "__main__":
 
@@ -107,6 +109,13 @@ if __name__ == "__main__":
     # It demonstrates that the dataset can be used standalone.
     example_df = dataset.prepare("train")
     print(example_df.head(10))
+    df_train, df_valid = dataset.prepare(
+        ["train", "valid"], col_set=["feature", "label"], data_key=DataHandlerLP.DK_L
+    )
+    with open("example_train.pkl", "wb") as f:
+        pickle.dump(df_train, f)
+    with open("example_valid.pkl", "wb") as f:
+        pickle.dump(df_valid, f)
 
     # start exp
     with R.start(experiment_name="workflow"):
