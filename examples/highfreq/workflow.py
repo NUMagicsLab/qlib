@@ -23,7 +23,8 @@ from qlib.data.dataset.handler import DataHandlerLP
 from qlib.data.ops import Operators
 from qlib.data.data import Cal
 from qlib.tests.data import GetData
-
+import sys
+sys.path.append("/Users/weijianli/Documents/phdProject/qlib/examples/highfreq")
 from highfreq_ops import get_calendar_day, DayLast, FFillNan, BFillNan, Date, Select, IsNull, Cut
 
 
